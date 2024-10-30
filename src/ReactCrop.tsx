@@ -39,8 +39,70 @@ interface EVData {
 
 const DOC_MOVE_OPTS = { capture: true, passive: false }
 
-// NOTE: This function will be refactored out.
 function containCrop(prevCrop: Partial<Crop>, crop: Partial<Crop>, imageWidth: number, imageHeight: number) {
+  const pixelCrop = convertToPixelCrop(crop, imageWidth, imageHeight);
+  const prevPixelCrop = convertToPixelCrop(prevCrop, imageWidth, imageHeight);
+
+  // Non-aspect ratio crops are simpler
+  if (!pixelCrop.aspect) {
+    if (pixelCrop.x < 0) {
+      pixelCrop.width += pixelCrop.x;
+      pixelCrop.x = 0;
+    } else if (pixelCrop.x + pixelCrop.width > imageWidth) {
+      pixelCrop.width = imageWidth - pixelCrop.x;
+    }
+
+    if (pixelCrop.y + pixelCrop.height > imageHeight) {
+      pixelCrop.height = imageHeight - pixelCrop.y;
+    }
+
+    return pixelCrop;
+  }
+
+  // Contain crop if overflowing on X.
+  if (pixelCrop.x < 0) {
+    pixelCrop.width += pixelCrop.x;
+    pixelCrop.x = 0;
+    pixelCrop.height = pixelCrop.width / pixelCrop.aspect;
+  } else if (pixelCrop.x + pixelCrop.width > imageWidth) {
+    pixelCrop.width = imageWidth - pixelCrop.x;
+    pixelCrop.height = pixelCrop.width / pixelCrop.aspect;
+  }
+
+  // Contain crop if overflowing on Y.
+  if (pixelCrop.y < 0) {
+    pixelCrop.height += pixelCrop.y;
+    pixelCrop.y = 0;
+    pixelCrop.width = pixelCrop.height * pixelCrop.aspect;
+  } else if (pixelCrop.y + pixelCrop.height > imageHeight) {
+    pixelCrop.height = imageHeight - pixelCrop.y;
+    pixelCrop.width = pixelCrop.height * pixelCrop.aspect;
+  }
+
+  // After adjusting, ensure the crop doesn't overflow on the opposite axis due to aspect ratio
+  if (pixelCrop.x + pixelCrop.width > imageWidth) {
+    pixelCrop.width = imageWidth - pixelCrop.x;
+    pixelCrop.height = pixelCrop.width / pixelCrop.aspect;
+  }
+  if (pixelCrop.y + pixelCrop.height > imageHeight) {
+    pixelCrop.height = imageHeight - pixelCrop.y;
+    pixelCrop.width = pixelCrop.height * pixelCrop.aspect;
+  }
+
+  // Ensure x and y are not negative
+  if (pixelCrop.x < 0) {
+    pixelCrop.x = 0;
+  }
+  if (pixelCrop.y < 0) {
+    pixelCrop.y = 0;
+  }
+
+  return pixelCrop;
+}
+
+
+// NOTE: This function will be refactored out.
+function containCrop_old(prevCrop: Partial<Crop>, crop: Partial<Crop>, imageWidth: number, imageHeight: number) {
   const pixelCrop = convertToPixelCrop(crop, imageWidth, imageHeight)
   const prevPixelCrop = convertToPixelCrop(prevCrop, imageWidth, imageHeight)
 
@@ -765,66 +827,6 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
   }
 
   resizeCrop() {
-    const { evData } = this;
-    const { crop } = this.props;
-    const nextCrop = this.makeNewCrop();
-    const { ord } = evData;
-
-    // Calculate new width and height while maintaining aspect ratio
-    const newSize = this.getNewSize();
-
-    // Adjust based on inverse and cross-over status
-    let newX = evData.cropStartX;
-    let newY = evData.cropStartY;
-
-    if (evData.xCrossOver) {
-      newX = nextCrop.x + (nextCrop.width - newSize.width);
-    }
-
-    if (evData.yCrossOver) {
-      newY = nextCrop.y + (nextCrop.height - newSize.height);
-    }
-
-    // Adjust width and height based on aspect ratio and the ord
-    let newWidth = newSize.width;
-    let newHeight = newSize.height;
-
-    if (crop.aspect) {
-      if (['e', 'w', 'ne', 'nw', 'se', 'sw'].includes(ord)) {
-        // Width changed, adjust height
-        newHeight = newWidth / crop.aspect;
-      } else {
-        // Height changed, adjust width
-        newWidth = newHeight * crop.aspect;
-      }
-    }
-
-    // Contain within the defined bounds and enforce aspect ratio
-    const containedCrop = containCrop(
-      this.props.crop,
-      {
-        unit: nextCrop.unit,
-        x: newX,
-        y: newY,
-        width: newWidth,
-        height: newHeight,
-        aspect: nextCrop.aspect,
-      },
-      this.mediaDimensions.width,
-      this.mediaDimensions.height
-    );
-
-    nextCrop.x = containedCrop.x;
-    nextCrop.y = containedCrop.y;
-    nextCrop.width = containedCrop.width;
-    nextCrop.height = containedCrop.height;
-
-    console.log('nextCrop: ', nextCrop);
-
-    return nextCrop;
-  }
-
-  resizeCrop_old() {
     const { evData } = this
     const { crop, minWidth = 0, minHeight = 0 } = this.props
     const nextCrop = this.makeNewCrop()
@@ -883,6 +885,7 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
       nextCrop.y = containedCrop.y
       nextCrop.width = containedCrop.width
       nextCrop.height = containedCrop.height
+      console.log('apply aspect: ', nextCrop.aspect);
     } else if (ReactCrop.xOrds.indexOf(ord) > -1) {
       nextCrop.x = containedCrop.x
       nextCrop.width = containedCrop.width
@@ -904,6 +907,8 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
     if (nextCrop.height < minHeight) {
       return crop
     }
+
+    console.log('nextCrop: ', nextCrop);
 
     return nextCrop
   }
