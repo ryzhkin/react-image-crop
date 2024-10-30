@@ -41,8 +41,7 @@ const DOC_MOVE_OPTS = { capture: true, passive: false }
 
 function containCrop(prevCrop: Partial<Crop>, crop: Partial<Crop>, imageWidth: number, imageHeight: number) {
   const pixelCrop = convertToPixelCrop(crop, imageWidth, imageHeight);
-  const prevPixelCrop = convertToPixelCrop(prevCrop, imageWidth, imageHeight);
-
+  convertToPixelCrop(prevCrop, imageWidth, imageHeight);
   // Non-aspect ratio crops are simpler
   if (!pixelCrop.aspect) {
     if (pixelCrop.x < 0) {
@@ -98,73 +97,6 @@ function containCrop(prevCrop: Partial<Crop>, crop: Partial<Crop>, imageWidth: n
   }
 
   return pixelCrop;
-}
-
-
-// NOTE: This function will be refactored out.
-function containCrop_old(prevCrop: Partial<Crop>, crop: Partial<Crop>, imageWidth: number, imageHeight: number) {
-  const pixelCrop = convertToPixelCrop(crop, imageWidth, imageHeight)
-  const prevPixelCrop = convertToPixelCrop(prevCrop, imageWidth, imageHeight)
-
-  // Non-aspects are simple
-  if (!pixelCrop.aspect) {
-    if (pixelCrop.x < 0) {
-      pixelCrop.width += pixelCrop.x
-      pixelCrop.x = 0
-    } else if (pixelCrop.x + pixelCrop.width > imageWidth) {
-      pixelCrop.width = imageWidth - pixelCrop.x
-    }
-
-    if (pixelCrop.y + pixelCrop.height > imageHeight) {
-      pixelCrop.height = imageHeight - pixelCrop.y
-    }
-
-    return pixelCrop
-  }
-
-  // Contain crop if overflowing on X.
-  if (pixelCrop.x < 0) {
-    pixelCrop.width = pixelCrop.x + pixelCrop.width
-    pixelCrop.x = 0
-    pixelCrop.height = pixelCrop.width / pixelCrop.aspect
-  } else if (pixelCrop.x + pixelCrop.width > imageWidth) {
-    pixelCrop.width = imageWidth - pixelCrop.x
-    pixelCrop.height = pixelCrop.width / pixelCrop.aspect
-  }
-
-  // If sizing in up direction...
-  if (prevPixelCrop.y > pixelCrop.y) {
-    if (pixelCrop.x + pixelCrop.width >= imageWidth) {
-      // ...and we've hit the right border, don't adjust Y.
-      // Adjust height so crop selection doesn't move if Y is adjusted.
-      pixelCrop.height += prevPixelCrop.height - pixelCrop.height
-      pixelCrop.y = prevPixelCrop.y
-    } else if (pixelCrop.x <= 0) {
-      // ...and we've hit the left border, don't adjust Y.
-      // Adjust height so crop selection doesn't move if Y is adjusted.
-      pixelCrop.height += prevPixelCrop.height - pixelCrop.height
-      pixelCrop.y = prevPixelCrop.y
-    }
-  }
-
-  // Contain crop if overflowing on Y.
-  if (pixelCrop.y < 0) {
-    pixelCrop.height = pixelCrop.y + pixelCrop.height
-    pixelCrop.y = 0
-    pixelCrop.width = pixelCrop.height * pixelCrop.aspect
-  } else if (pixelCrop.y + pixelCrop.height > imageHeight) {
-    pixelCrop.height = imageHeight - pixelCrop.y
-    pixelCrop.width = pixelCrop.height * pixelCrop.aspect
-  }
-
-  // If sizing in left direction and we've hit the bottom border, don't adjust X.
-  if (pixelCrop.x < prevPixelCrop.x && pixelCrop.y + pixelCrop.height >= imageHeight) {
-    // Adjust width so crop selection doesn't move if X is adjusted.
-    pixelCrop.width += prevPixelCrop.width - pixelCrop.width
-    pixelCrop.x = prevPixelCrop.x
-  }
-
-  return pixelCrop
 }
 
 export interface ReactCropProps {
@@ -885,7 +817,6 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
       nextCrop.y = containedCrop.y
       nextCrop.width = containedCrop.width
       nextCrop.height = containedCrop.height
-      console.log('apply aspect: ', nextCrop.aspect);
     } else if (ReactCrop.xOrds.indexOf(ord) > -1) {
       nextCrop.x = containedCrop.x
       nextCrop.width = containedCrop.width
@@ -908,7 +839,6 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
       return crop
     }
 
-    console.log('nextCrop: ', nextCrop);
 
     return nextCrop
   }
