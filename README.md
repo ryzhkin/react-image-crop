@@ -1,5 +1,6 @@
 # Last updates:
-9.1.2 - Fixed an issue where the aspect ratio (aspect: 16/9) was not maintained when resizing the cropper frame from the top-left handler after selecting an image. The cropper now retains the correct aspect ratio during resizing. 
+9.1.2 - Fixed an issue where the aspect ratio was not maintained when resizing the cropper frame 
+        from the bottom-left corner after selecting an image. The cropper now retains the correct aspect ratio during resizing. 
  
 
 

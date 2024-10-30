@@ -785,6 +785,20 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
       newY = nextCrop.y + (nextCrop.height - newSize.height);
     }
 
+    // Adjust width and height based on aspect ratio and the ord
+    let newWidth = newSize.width;
+    let newHeight = newSize.height;
+
+    if (crop.aspect) {
+      if (['e', 'w', 'ne', 'nw', 'se', 'sw'].includes(ord)) {
+        // Width changed, adjust height
+        newHeight = newWidth / crop.aspect;
+      } else {
+        // Height changed, adjust width
+        newWidth = newHeight * crop.aspect;
+      }
+    }
+
     // Contain within the defined bounds and enforce aspect ratio
     const containedCrop = containCrop(
       this.props.crop,
@@ -792,8 +806,8 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
         unit: nextCrop.unit,
         x: newX,
         y: newY,
-        width: newSize.width,
-        height: newSize.width / (crop.aspect || 1), // Ensure height respects aspect ratio
+        width: newWidth,
+        height: newHeight,
         aspect: nextCrop.aspect,
       },
       this.mediaDimensions.width,
@@ -805,7 +819,7 @@ class ReactCrop extends PureComponent<ReactCropProps, ReactCropState> {
     nextCrop.width = containedCrop.width;
     nextCrop.height = containedCrop.height;
 
-    console.log('---> ', nextCrop);
+    console.log('nextCrop: ', nextCrop);
 
     return nextCrop;
   }
